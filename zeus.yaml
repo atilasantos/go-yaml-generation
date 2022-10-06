@@ -1,0 +1,111 @@
+global:
+  application: zeus
+  namespace: production
+
+  image:
+    repository: "nexus.sigame.com.br"
+    pullPolicy: Always
+    pullSecret: nexus-v3
+
+  labels:    
+    oracle: false   
+    timescale: true
+    redis: true
+    external: true
+    kafka: true
+    standalone: true
+    priority: 5
+
+  serviceaccount:
+    enabled: false
+    annotations: []
+
+  configMap:
+    enabled: false
+    data: {}
+
+  revisionHistoryLimit: 4
+
+  annotations:
+    sidecar.istio.io/inject: "false"
+    proxy.istio.io/config: '{ "holdApplicationUntilProxyStarts": true }'
+
+  nameOverride: ""
+  fullnameOverride: ""
+
+  volumes:
+    enabled: false
+    name:
+    hostPath:
+
+  nodeAffinity:
+
+certificate:
+  enabled: false
+  commonName: "zeus"
+  issuer:
+    name: letsencrypt
+  dnsNames:
+    
+
+restartPolicy: Always
+
+deployment: {{range .}}
+  - name: {{ .GetName }}
+    enabled: true
+    containers: 
+    - name: {{ .GetName }}
+      imagename: zeus
+      tag: 1.2.0
+      containerPorts: 80
+
+      probes:
+        enabled: false
+      
+      env:
+        SYMBOLS_TYPE_BY_ORDER_TO_RUN: {{ .GenerateSymbolObject }}
+        BUFFER_REDIS_DB: {{ .BufferDb }}
+        KEY_REDIS_DB: {{ .KeyDb }}{{ if .PolygonKey }}
+        POLYGON1_KEY: {{ .PolygonKey}}
+        {{else}}
+        {{end}} 
+      resources:
+        requests:
+          cpu: 1600m
+          memory: 512Mi
+        limits:
+          cpu: 3
+          memory: 756Mi
+
+      hpa:
+        enabled: false
+        minReplicas: 1
+        maxReplicas: 1
+        metrics:
+          cpu: 80
+          memory: 80
+
+      service:
+        enabled: false
+        name: http
+        protocol: TCP
+        annotations: []  
+
+      ingress:
+        enabled: false   
+
+        cors:
+          enabled: false
+          allowCredentials: true
+          allowOrigins:
+          - regex: .
+          allowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - PATCH
+          - OPTIONS
+          allowHeaders:
+          - x-thebes-answer
+{{end}}
